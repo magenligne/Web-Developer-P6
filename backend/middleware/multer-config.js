@@ -6,10 +6,15 @@ const MIME_TYPES = {
   'image/png': 'png'
 };
 
+// Pour implémenter le téléchargement de fichiers, nous utiliserons multer , 
+//un package qui nous permet de gérer les fichiers entrants dans les requêtes HTTP.
+// Commençons par installer multer et par créer un élément de middleware pour gérer ces fichiers entrants:
+
 //Nous créons une constante storage , à passer à multer comme configuration, 
-//qui contient la logique nécessaire pour indiquer à multer où enregistrer les fichiers entrants :
+//qui contient la logique nécessaire pour indiquer à multer où enregistrer les fichiers entrants.
+// la méthode diskStorage()  configure le chemin et le nom de fichier pour les fichiers entrants.
 const storage = multer.diskStorage({
-  //destination indique à multer d'enregistrer les fichiers dans le dossier images:
+  //la fonction destination indique à multer d'enregistrer les fichiers dans le dossier images:
   destination: (req, file, callback) => {
     callback(null, 'images');
   },
@@ -27,4 +32,4 @@ const storage = multer.diskStorage({
 //indiquons que nous gérerons uniquement les téléchargements de fichiers image:
 module.exports = multer({storage: storage}).single('image');
 //La méthode single()  crée un middleware qui capture les fichiers d'un certain type (passé en argument), 
-//et les enregistre au système de fichiers du serveur à l'aide du storage configuré
+//et les enregistre dans des fichiers du serveur à l'aide du storage configuré.

@@ -10,11 +10,14 @@ router.get("/", auth, stuffCtrl.getAllSauces);
 //route pour créer une sauce:
 router.post("/", auth, multer, stuffCtrl.createSauce);
 
-router.get("/:id", auth, stuffCtrl.getOneThing);
+router.get("/:id", auth, stuffCtrl.getOneSauce);
 
-router.put("/:id", auth, multer, stuffCtrl.modifyThing);
+router.put("/:id", auth, multer, stuffCtrl.modifySauce);
 
 //pour supprimer une sauce:
 router.delete("/:id", auth, stuffCtrl.deleteSauce);
+
+// //pour liker ou disliker une sauce
+router.post("/:id/like", auth, stuffCtrl.likeSauce);
 
 module.exports = router;

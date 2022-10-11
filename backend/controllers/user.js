@@ -43,7 +43,7 @@ exports.login = (req, res, next) => {
             token: jwt.sign({ userId: user._id }, 
                 //Nous utilisons une chaîne secrète de développement temporaire RANDOM_SECRET_KEY pour crypter notre token:
                 "RANDOM_TOKEN_SECRET", {
-              expiresIn: "24h",
+              expiresIn: "72h",
             }),
           });
         })
