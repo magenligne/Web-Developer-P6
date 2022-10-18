@@ -52,11 +52,16 @@ exports.getOneSauce = (req, res, next) => {
 
 //FONCTION MODIFIER UNE SAUCE
 exports.modifySauce = (req, res, next) => {
-  //on crée un objet sauceObject qui regarde si req.file existe ou non, ie s'il y a un fichier à télécharger ou non.
+  // console.log("...req.body.sauce: ");
+  // console.log(...req.body.sauce);
+
+  //on crée un objet sauceObject et on demande si req.file existe ou non, ie s'il y a un fichier à télécharger ou non.
   const sauceObject = req.file
     ? {
         //S'il existe, on traite la nouvelle image :
+        //on met dans sauceObject à l'aide de ... la partie Json du body, ie tout sauf l'image:
         ...JSON.parse(req.body.sauce),
+
         //Nous utilisons req.protocol pour obtenir le premier segment (dans notre cas 'http').
         //Nous ajoutons '://', puis utilisons req.get('host') pour obtenir l'hôte du serveur (ici, 'localhost:3000').
         //Nous ajoutons finalement '/images/' et le nom de fichier pour compléter notre URL.
@@ -67,30 +72,23 @@ exports.modifySauce = (req, res, next) => {
     : {
         // s'il n'existe pas, on traite simplement l'objet entrant: on met le contenu du body de la requête dans
         // sauceObject à l'aide de l'opérateur ...
+
         ...req.body,
       };
-  //suppression du champ _userId envoyé par le client
-  delete sauceObject._userId;
-  //on cherche dans le tableau des sauces l'id de la sauce à modifier passé dans la requete:
-  Sauce.findOne({ _id: req.params.id })
-    .then((sauce) => {
-      //verification que le requérant est le créateur de la sauce:
-      if (sauce.userId != req.auth.userId) {
-        res.status(401).json({ message: "Not authorized" });
-      } else {
-        console.log("coucou");
-        sauce
-          .updateOne(
-            { _id: req.params.id },
-            { ...sauceObject, _id: req.params.id }
-          )
-          .then(() => res.status(200).json({ message: "Sauce modifiée!" }))
-          .catch((error) => res.status(401).json({ error }));
-      }
-    })
-    .catch((error) => {
-      res.status(400).json({ error });
-    });
+  console.log(" contenu de sauceObject après traitement file ou non:");
+  console.log(sauceObject); //ok
+
+  // suppression du champ _userId envoyé par le client
+  delete sauceObject.userId;
+  console.log("sauceObject après delete userId:");
+  console.log(sauceObject);
+  //ON VERIFIE QUE LE MODIFICATEUR EST LE CREATEUR SANS QUOI IL N EST PAS AUTORISE A MODIFIE LA SAUCE:
+  Sauce.updateOne(
+    { _id: req.params.id },
+    { ...sauceObject, _id: req.params.id }
+  )
+    .then(() => res.status(200).json({ message: "Objet modifié !" }))
+    .catch((error) => res.status(400).json({ error }));
 };
 
 //FONCTION SUPPRIMER UNE SAUCE
@@ -135,59 +133,163 @@ exports.getAllSauces = (req, res, next) => {
 };
 
 //FONCTION DE GESTION DES LIKE
-exports.likeSauce=(req,res,next)=>{
+exports.likeSauce = (req, res, next) => {
   //on cherche la sauce que l'on veut liker dans l'api via son id passer dans l'url de la requête
+
+  // const sauce = Sauce.findOne({ _id: req.params.id })
   Sauce.findOne({ _id: req.params.id })
-  .then((sauce) => {
-    const likes=sauce.likes;
-    const dislikes=sauce.dislikes;
-    const usersLiked=sauce.usersLiked;
-    const usersDisliked=sauce.usersDisliked;
+    .then((sauce) => {
+      console.log("je suis dans la fonction like");
 
-    //on recupère les infos de la requête dans des variables:
-    let userIdLikeur = req.body.userId;
-    let like = req.body.like;
+      const likes = sauce.likes; //2
+      const dislikes = sauce.dislikes; //1
+      const usersLiked = sauce.usersLiked; //["id1","id2"]
+      const usersDisliked = sauce.usersDisliked;
+      console.log(usersLiked);
+      //on recupère les infos de la requête dans des variables:
+      let userIdLikeur = req.body.userId;
+      let like = req.body.like;
 
-// on créer un tableau des userId:
-let listUserIdBrute = Sauce().map((chaqueSauce) => {
-  return chaqueSauce._userId});
-//on supprime les userId en double:
-let listUserId = listUserIdBrute.filter((x,i)=> listUserIdBrute.indexOf(x) === i);
+      //****************si le user likeur n'est pas enregistré dans le tableau des users likeurs de la sauce et qu'il a liker la sauce:
+      if (!usersLiked.includes(userIdLikeur) && like === 1) {
+        //s'il avait disliké au préalable, on supprime son dislike:
+        if (usersDisliked.includes(userIdLikeur)) {
+          Sauce.updateOne(
+            { _id: req.params.id },
+            {
+              $inc: { dislikes: -1 },
+              $pull: { usersDisliked: userIdLikeur },
+            }
+          )
+            //201: created
+            .then(() =>
+              res
+                .status(201)
+                .json({
+                  message: "Sauce mise à jour avec décrément d'un dislike.",
+                })
+            )
+            .catch((error) =>
+              res.status(400).json({ message: "Mauvaise requête." })
+            );
+        }
+        //Dans tous les cas on enregistre son like:
+        Sauce.updateOne(
+          //le premier paramètre de cette méthode mongoDB updateOne(filter,update,options) est le filtre:
+          { _id: req.params.id },
+          //ensuite on écrit les modifications voulues: likes à 1 et mettre l'id du likeur dans le tableaux des users likeurs:
+          {
+            //pour cela on utilise un opérateur de mise à jour mongoDB: $inc qui incrémente un champ avec une valeur.
+            //syntaxe: { $inc: { <field1>: <amount1>, <field2>: <amount2>, ... } }
+            $inc: { likes: 1 },
+            //$push permet d'ajouter un champ et sa valeur à un élément d'une collection ou de mettre à jour la valeur du champ s'il existe:
+            $push: { usersLiked: userIdLikeur },
+          }
+        )
+          //le résultat de la méthode updateOne est une promesse donc on doit ajouter .then et .cath pour traiter cette promesse:
+          .then(() =>
+            res
+              .status(201)
+              .json({ message: "Sauce mise à jour avec incrément d'un like!" })
+          )
+          .catch((error) => res.status(400).json({ error }));
+      }
 
-//on initialise un tableau à 2 dimensions pour aceuillir la valeur de like de chaque user pour cette sauce:
-let listUserIdLike=[[],[]];
-for(i=0; i<= listUserId.length; i++){
-listUserIdLike[i][i]=[[listUserId[i]],[0]];
-}
-//on cible le likeur dans le tableau des usersId:
-let indice=listUserIdLike.findIndex(ligne => ligne === [[userIdLikeur],[0]]);
-    //on traite chaque cas de like:
-    if(like==1){
-      //on attribue 1 au user dans le tableau listUserIdLike.
-listUserIdLike[indice]=[[userIdLikeur],[1]];
-      //on ajoute 1 à la sauce.likes et à sauce.usersLiked.
-      likes ++;
-      usersLiked ++;     
-    }else if(like==-1){
- //on attribue -1 au user dans le tableau listUserIdLike.
- listUserIdLike[indice]=[[userIdLikeur],[-1]];
- //on ajoute 1 à la sauce.likes et à sauce.usersLiked.
- dislikes ++;
- usersDisliked ++;
-    }else if(like==0){
- //on attribue 0 au user dans le tableau listUserIdLike.
- listUserIdLike[indice]=[[userIdLikeur],[0]];
- //on teste la valeur initiale dans le tableau des like, si c'était un like (1) on décrémente les like etc.
-if(listUserIdLike[indice]==[[userIdLikeur],[1]]){
-  likes --;
-  usersLiked --;
-}else if(listUserIdLike[indice]==[[userIdLikeur],[-1]]){
-  dislikes --;
-  usersDisliked --;
-}
-    }
-  })
-  .catch((error) => {
-    res.status(400).json({ error });
-  });
+      //****************si le user likeur est enregistré dans le tableau des users likeurs de la sauce et qu'il ne veut plus liker:
+      if (usersLiked.includes(userIdLikeur) && like === 0) {
+        Sauce.updateOne(
+          { _id: req.params.id },
+          {
+            $inc: { likes: -1 },
+            //$pull permet de supprimer un champ et sa valeur d' un élément d'une collection :
+            $pull: { usersLiked: userIdLikeur },
+          }
+        )
+          .then(() =>
+            res
+              .status(201)
+              .json({ message: "Sauce mise à jour avec décrément d'un like." })
+          )
+          .catch((error) =>
+            res.status(400).json({ message: "Mauvaise requête." })
+          );
+      }
+
+      //****************si le user likeur enregistré dans tableau des users DISlikeurs de la sauce et qu'il ne veut plus DISliker:
+      if (usersDisliked.includes(userIdLikeur) && like === 0) {
+        Sauce.updateOne(
+          { _id: req.params.id },
+          {
+            $inc: { dislikes: -1 },
+            $pull: { usersDisliked: userIdLikeur },
+          }
+        )
+          .then(() =>
+            res
+              .status(201)
+              .json({
+                message: "Sauce mise à jour avec décrément d'un dislike.",
+              })
+          )
+          .catch((error) =>
+            res.status(400).json({ message: "Mauvaise requête." })
+          );
+      }
+
+      //****************si le user likeur n'est pas enregistré dans le tableau des users dislikeurs de la sauce et qu'il a disliker la sauce:
+      if (!usersDisliked.includes(userIdLikeur) && like === -1) {
+        //s'il avait au préalable liker la sauce, on supprime son like:
+        if (usersLiked.includes(userIdLikeur)) {
+          Sauce.updateOne(
+            { _id: req.params.id },
+            {
+              $inc: { likes: -1 },
+              $pull: { usersLiked: userIdLikeur },
+            }
+          )
+            .then(() =>
+              res
+                .status(201)
+                .json({
+                  message: "Sauce mise à jour avec décrément d'un like.",
+                })
+            )
+            .catch((error) =>
+              res.status(400).json({ message: "Mauvaise requête." })
+            );
+        }
+        //Dans tous les cas, on enregistre son dislike:
+        Sauce.updateOne(
+          { _id: req.params.id },
+          {
+            $inc: { dislikes: 1 },
+            $push: { usersDisliked: userIdLikeur },
+          }
+        )
+          .then(() =>
+            res
+              .status(201)
+              .json({
+                message: "Sauce mise à jour avec incrément d'un dislike.",
+              })
+          )
+          .catch((error) => res.status(400).json({ error }));
+      }
+
+      //**************si l'utilisateur veut refaire la même action 2 fois, aucun changement ne se produit. */
+      if (
+        (!usersLiked.includes(userIdLikeur) &&
+          usersDisliked.includes(userIdLikeur) &&
+          like == -1) ||
+        (usersLiked.includes(userIdLikeur) &&
+          !usersDisliked.includes(userIdLikeur) &&
+          like == 1) ||
+        (!usersLiked.includes(userIdLikeur) &&
+          !usersDisliked.includes(userIdLikeur) &&
+          like == 0)
+      ) {
+        res.json({ message: "Pas de changement." });
+      }
+    })
+    .catch((error) => res.status(404).json({ message: "Sauce non trouvée." }));
 };
