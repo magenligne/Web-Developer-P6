@@ -3,7 +3,7 @@ const fs = require("fs");
 // const sauce = require("../models/sauce");
 
 //CETTE FONCTION CREE UNE SAUCE. on crée une instance dU modèle sauce en lui passant un objet
-//JavaScript contenant toutes les informations requises du corps de requête analysé grâce à l'opérateur...
+//JavaScript contenant toutes les informations requises du corps de requête analysé grâce à l'opérateur thread ...
 //(en ayant supprimé en amont le faux_id envoyé par le front-end)
 exports.createSauce = (req, res, next) => {
   const sauceObject = JSON.parse(req.body.sauce);
@@ -45,7 +45,7 @@ exports.getOneSauce = (req, res, next) => {
     })
     .catch((error) => {
       res.status(404).json({
-        error: error,
+        message: "Sauce non trouvée.",
       });
     });
 };
@@ -56,6 +56,7 @@ exports.modifySauce = (req, res, next) => {
   // console.log(...req.body.sauce);
 
   //on crée un objet sauceObject et on demande si req.file existe ou non, ie s'il y a un fichier à télécharger ou non.
+  //en fonction de la réponse à cette question, on remplit différemment sauceObject
   const sauceObject = req.file
     ? {
         //S'il existe, on traite la nouvelle image :
@@ -80,14 +81,12 @@ exports.modifySauce = (req, res, next) => {
 
   // suppression du champ _userId envoyé par le client
   delete sauceObject.userId;
-  console.log("sauceObject après delete userId:");
-  console.log(sauceObject);
   //ON VERIFIE QUE LE MODIFICATEUR EST LE CREATEUR SANS QUOI IL N EST PAS AUTORISE A MODIFIE LA SAUCE:
   Sauce.updateOne(
     { _id: req.params.id },
     { ...sauceObject, _id: req.params.id }
   )
-    .then(() => res.status(200).json({ message: "Objet modifié !" }))
+    .then(() => res.status(200).json({ message: "Sauce modifiée !" }))
     .catch((error) => res.status(400).json({ error }));
 };
 
@@ -98,19 +97,19 @@ exports.deleteSauce = (req, res, next) => {
     .then((sauce) => {
       //Nous vérifions si l’utilisateur qui a fait la requête de suppression est bien celui qui a créé la sauce.
       if (sauce.userId != req.auth.userId) {
-        res.status(401).json({ message: "Not authorized" });
+        res.status(401).json({ message: "Vous n'êtes pas autorisé à supprimer cette sauce." });
       } else {
         //Nous utilisons le fait de savoir que notre URL d'image contient un segment /images/ pour séparer le nom de fichier.
         const filename = sauce.imageUrl.split("/images/")[1];
-        //Nous utilisons ensuite la fonction unlink du package fs pour supprimer ce fichier,
+        //Nous utilisons ensuite la fonction unlink du package fs pour supprimer ce fichier du système de fichiers du serveur
         //en lui passant le fichier à supprimer et le callback à exécuter une fois ce fichier supprimé.
         fs.unlink(`images/${filename}`, () => {
-          //Dans le callback, nous implémentons la logique d'origine en supprimant la sauce de la base de données
+          //Dans le callback, nous implémentons le code pour supprimer la sauce de la base de données:
           Sauce.deleteOne({ _id: req.params.id })
             .then(() => {
-              res.status(200).json({ message: "Objet supprimé !" });
+              res.status(200).json({ message: "Sauce supprimée !" });
             })
-            .catch((error) => res.status(401).json({ error }));
+            .catch((error) => res.status(500).json({ error }));
         });
       }
     })
@@ -132,11 +131,9 @@ exports.getAllSauces = (req, res, next) => {
     });
 };
 
-//FONCTION DE GESTION DES LIKE
+//FONCTION DE GESTION DES "LIKE"
 exports.likeSauce = (req, res, next) => {
   //on cherche la sauce que l'on veut liker dans l'api via son id passer dans l'url de la requête
-
-  // const sauce = Sauce.findOne({ _id: req.params.id })
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
       console.log("je suis dans la fonction like");
@@ -149,7 +146,6 @@ exports.likeSauce = (req, res, next) => {
       //on recupère les infos de la requête dans des variables:
       let userIdLikeur = req.body.userId;
       let like = req.body.like;
-
       //****************si le user likeur n'est pas enregistré dans le tableau des users likeurs de la sauce et qu'il a liker la sauce:
       if (!usersLiked.includes(userIdLikeur) && like === 1) {
         //s'il avait disliké au préalable, on supprime son dislike:

@@ -1,3 +1,5 @@
+//fonction qui vérifie que l’utilisateur est bien connecté et 
+//qui va transmettre les informations de connexion aux différentes méthodes qui vont gérer les requêtes
 const jwt = require('jsonwebtoken');
  
 module.exports = (req, res, next) => {

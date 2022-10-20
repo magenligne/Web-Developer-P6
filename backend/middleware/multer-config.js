@@ -8,10 +8,10 @@ const MIME_TYPES = {
 
 // Pour implémenter le téléchargement de fichiers, nous utiliserons multer , 
 //un package qui nous permet de gérer les fichiers entrants dans les requêtes HTTP.
-// Commençons par installer multer et par créer un élément de middleware pour gérer ces fichiers entrants:
+// Nous créons ici un élément de middleware pour gérer ces fichiers entrants:
 
 //Nous créons une constante storage , à passer à multer comme configuration, 
-//qui contient la logique nécessaire pour indiquer à multer où enregistrer les fichiers entrants.
+//qui contient la logique nécessaire pour indiquer à multer où enregistrer les fichiers entrants:
 // la méthode diskStorage()  configure le chemin et le nom de fichier pour les fichiers entrants.
 const storage = multer.diskStorage({
   //la fonction destination indique à multer d'enregistrer les fichiers dans le dossier images:
