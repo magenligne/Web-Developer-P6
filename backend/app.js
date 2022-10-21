@@ -1,5 +1,10 @@
 //APPLICATION EXPRESS
 
+const helmet = require('helmet')
+
+
+
+
 //incliusion du module dotenv pour qu'il charge les variables d'environnement dans process.env
 require('dotenv').config()
 
@@ -51,5 +56,23 @@ const sauceRoutes = require("./routes/sauce");
 app.use("/api/sauces", sauceRoutes);
 app.use("/api/auth", userRoutes);
 app.use("/images", express.static(path.join(__dirname, "images")));
+
+//ajoute l'entête x-xss-protection dans les requêtes gérées par notre serveur
+//protégeant de certaines failles XSS (attaques par injection de JS côté client)
+//ex: affichage faux formulaire de connexion pour vol de session
+app.use(helmet.xssFilter());
+
+//activation de l'entête X-frames-options avec 'deny' interdisant d'ouvrir une page de l'appli à l'intérieur d'une iframe pirate
+app.use(helmet.frameguard({ action: 'deny' }));
+
+//activation de l'entête http Strict Transport Security pour augmenter la sécurité des communications
+//HSTS ne dit pas au navigateur de passer du HTTP au HTTPS. Il lui dit juste « Reste donc discuter avec moi en HTTPS pendant quelques instants »
+var sixtyDaysInSeconds = 5184000;
+app.use(helmet.hsts({maxAge: sixtyDaysInSeconds}));
+//après install de la librairie express-enforces-ssl via le terminal, on utilise son composant
+var express_enforces_ssl = require('express-enforces-ssl');
+//Ce middleware va intercepter toutes les requêtes faites sur le port HTTP et va renvoyer avec la réponse « HTTP 301 Moved Permanently » vers l’url en HTTPS.
+
+app.use(express_enforces_ssl());
 
 module.exports = app;
