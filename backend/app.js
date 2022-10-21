@@ -1,5 +1,8 @@
 //APPLICATION EXPRESS
 
+//incliusion du module dotenv pour qu'il charge les variables d'environnement dans process.env
+require('dotenv').config()
+
 //afficheur de requetes:
 const morgan = require("morgan");
 
@@ -8,9 +11,10 @@ const express = require("express");//import Express de Node
 const app = express();
 const mongoose = require("mongoose");
 
+//on utilise notre variable d'environnement LIEN_MDB qui protège notre lien, le fichier.env étant ignoré par git
 mongoose
   .connect(
-    "mongodb+srv://ilagam:mdpTest@cluster0.inae4xq.mongodb.net/?retryWrites=true&w=majority",
+   process.env.LIEN_MDB,
     { useNewUrlParser: true, useUnifiedTopology: true }
   )
   .then(() => console.log("Connexion à MongoDB réussie !"))
@@ -44,7 +48,7 @@ const userRoutes = require("./routes/user");
 const sauceRoutes = require("./routes/sauce");
 
 //La méthode app.use() vous permet d'attribuer un middleware à une route spécifique de votre application
-app.use("/api/sauce", sauceRoutes);
+app.use("/api/sauces", sauceRoutes);
 app.use("/api/auth", userRoutes);
 app.use("/images", express.static(path.join(__dirname, "images")));
 

@@ -1,0 +1,28 @@
+# HotTakes Back
+
+Ce projet utilise Node js et Express version 4.18.1.
+
+# Initialisation
+
+À partir de votre dossier backend , exécutez la commande de terminal npm init pour initialiser votre projet.
+
+## Pour lancer le projet
+
+Se connecter au front-end en se placant dans le fichier frontend et en tapant:' npm run start'
+À partir de votre dossier backend, démarrer le serveur en tapant 'nodemon server'
+On peut lire dans le terminal 'Connexion à MongoDB réussie!' 
+
+## Pour utiliser les variables d'environnement
+
+renommer le fichier .envEx en .env et entrer vos variables
+
+## Pour se déconnecter
+
+Taper ctrl c
+
+## Pour tester les requêtes
+
+Vous pouvez utiliser Postmann
+
+## Running unit tests
+

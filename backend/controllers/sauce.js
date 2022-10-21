@@ -136,19 +136,21 @@ exports.likeSauce = (req, res, next) => {
   //on cherche la sauce que l'on veut liker dans l'api via son id passer dans l'url de la requête
   Sauce.findOne({ _id: req.params.id })
     .then((sauce) => {
-      console.log("je suis dans la fonction like");
+      // console.log("je suis dans la fonction like");
 
       const likes = sauce.likes; //2
       const dislikes = sauce.dislikes; //1
       const usersLiked = sauce.usersLiked; //["id1","id2"]
       const usersDisliked = sauce.usersDisliked;
-      console.log(usersLiked);
+
       //on recupère les infos de la requête dans des variables:
       let userIdLikeur = req.body.userId;
       let like = req.body.like;
+
       //****************si le user likeur n'est pas enregistré dans le tableau des users likeurs de la sauce et qu'il a liker la sauce:
+      //
       if (!usersLiked.includes(userIdLikeur) && like === 1) {
-        //s'il avait disliké au préalable, on supprime son dislike:
+        //s'il avait disliké au préalable, on supprime son dislike:décrément de dislikes et supression de son Id dans usersDisliked
         if (usersDisliked.includes(userIdLikeur)) {
           Sauce.updateOne(
             { _id: req.params.id },
@@ -286,6 +288,8 @@ exports.likeSauce = (req, res, next) => {
       ) {
         res.json({ message: "Pas de changement." });
       }
+      console.log("likes:",likes);
+      console.log("dislikes:",dislikes);
     })
     .catch((error) => res.status(404).json({ message: "Sauce non trouvée." }));
 };
