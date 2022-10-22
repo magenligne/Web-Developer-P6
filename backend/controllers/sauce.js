@@ -157,6 +157,9 @@ exports.likeSauce = (req, res, next) => {
             {
               $inc: { dislikes: -1 },
               $pull: { usersDisliked: userIdLikeur },
+              $inc: { likes: 1 },
+              //$push permet d'ajouter un champ et sa valeur à un élément d'une collection ou de mettre à jour la valeur du champ s'il existe:
+              $push: { usersLiked: userIdLikeur }
             }
           )
             //201: created
@@ -164,14 +167,14 @@ exports.likeSauce = (req, res, next) => {
               res
                 .status(201)
                 .json({
-                  message: "Sauce mise à jour avec décrément d'un dislike.",
+                  message: "Sauce mise à jour avec décrément d'un dislike et incrément d'un like.",
                 })
             )
             .catch((error) =>
               res.status(400).json({ message: "Mauvaise requête." })
             );
-        }
-        //Dans tous les cas on enregistre son like:
+        }else{
+        //on enregistre son like:
         Sauce.updateOne(
           //le premier paramètre de cette méthode mongoDB updateOne(filter,update,options) est le filtre:
           { _id: req.params.id },
@@ -181,7 +184,7 @@ exports.likeSauce = (req, res, next) => {
             //syntaxe: { $inc: { <field1>: <amount1>, <field2>: <amount2>, ... } }
             $inc: { likes: 1 },
             //$push permet d'ajouter un champ et sa valeur à un élément d'une collection ou de mettre à jour la valeur du champ s'il existe:
-            $push: { usersLiked: userIdLikeur },
+            $push: { usersLiked: userIdLikeur }
           }
         )
           //le résultat de la méthode updateOne est une promesse donc on doit ajouter .then et .cath pour traiter cette promesse:
@@ -191,7 +194,7 @@ exports.likeSauce = (req, res, next) => {
               .json({ message: "Sauce mise à jour avec incrément d'un like!" })
           )
           .catch((error) => res.status(400).json({ error }));
-      }
+      }}
 
       //****************si le user likeur est enregistré dans le tableau des users likeurs de la sauce et qu'il ne veut plus liker:
       if (usersLiked.includes(userIdLikeur) && like === 0) {
@@ -200,7 +203,7 @@ exports.likeSauce = (req, res, next) => {
           {
             $inc: { likes: -1 },
             //$pull permet de supprimer un champ et sa valeur d' un élément d'une collection :
-            $pull: { usersLiked: userIdLikeur },
+            $pull: { usersLiked: userIdLikeur }
           }
         )
           .then(() =>
@@ -236,32 +239,35 @@ exports.likeSauce = (req, res, next) => {
 
       //****************si le user likeur n'est pas enregistré dans le tableau des users dislikeurs de la sauce et qu'il a disliker la sauce:
       if (!usersDisliked.includes(userIdLikeur) && like === -1) {
-        //s'il avait au préalable liker la sauce, on supprime son like:
+        //s'il avait au préalable liker la sauce, on supprime son like et on ajoute son dislike:
         if (usersLiked.includes(userIdLikeur)) {
           Sauce.updateOne(
             { _id: req.params.id },
             {
               $inc: { likes: -1 },
               $pull: { usersLiked: userIdLikeur },
+              $inc: { dislikes: 1 },
+              $push: { usersDisliked: userIdLikeur }
+
             }
           )
             .then(() =>
               res
                 .status(201)
                 .json({
-                  message: "Sauce mise à jour avec décrément d'un like.",
+                  message: "Sauce mise à jour avec décrément d'un like et incrément d'un dislike.",
                 })
             )
             .catch((error) =>
               res.status(400).json({ message: "Mauvaise requête." })
             );
-        }
+        }else{
         //Dans tous les cas, on enregistre son dislike:
         Sauce.updateOne(
           { _id: req.params.id },
           {
             $inc: { dislikes: 1 },
-            $push: { usersDisliked: userIdLikeur },
+            $push: { usersDisliked: userIdLikeur }
           }
         )
           .then(() =>
@@ -272,7 +278,7 @@ exports.likeSauce = (req, res, next) => {
               })
           )
           .catch((error) => res.status(400).json({ error }));
-      }
+      }}
 
       //**************si l'utilisateur veut refaire la même action 2 fois, aucun changement ne se produit. */
       if (
